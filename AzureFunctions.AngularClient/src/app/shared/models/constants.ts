@@ -39,6 +39,8 @@ export class Constants {
     public static msPortalHostName = 'https://ms.portal.azure.com';
     public static ReadWriteMode = 'readWrite'.toLocaleLowerCase();
     public static ReadOnlyMode = 'readOnly'.toLocaleLowerCase();
+    public static readonly appInsightsApiKey = 'APPINSIGHTS_API_KEY';
+    public static readonly appInsightsAppId = 'APPINSIGHTS_APP_ID';
 }
 
 export class SiteTabIds{
@@ -85,7 +87,7 @@ export class Links{
 }
 
 export class Order {
-    public static templateOrder: string[] = 
+    public static templateOrder: string[] =
     [
         'HttpTrigger-',
         'TimerTrigger-',

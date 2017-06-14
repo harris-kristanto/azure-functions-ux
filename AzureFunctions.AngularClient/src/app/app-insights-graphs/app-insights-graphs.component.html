@@ -1,3 +1,3 @@
-<p>
-  app-insights-graphs works!
-</p>
+<div>
+  <graph *ngFor="let graphData of graphsData" [data]="graphData | async"></graph>
+</div>

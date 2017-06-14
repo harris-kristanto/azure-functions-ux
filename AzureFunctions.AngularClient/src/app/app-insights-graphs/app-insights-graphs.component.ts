@@ -1,26 +1,53 @@
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+import { Query } from './../shared/models/ux-settings';
+import { AppInsightsResponse } from './../shared/models/app-insights-response';
+import { Observable } from 'rxjs/Observable';
+import { UxSettingsService } from './../shared/services/ux-settings.service';
 import { Subject } from 'rxjs/Subject';
+import 'rxjs/add/observable/combineLatest';
 import { ArmObj } from './../shared/models/arm/arm-obj';
 import { Component, OnInit, Input } from '@angular/core';
 
 @Component({
-  selector: 'app-app-insights-graphs',
+  selector: 'app-insights-graphs',
   templateUrl: './app-insights-graphs.component.html',
   styleUrls: ['./app-insights-graphs.component.scss']
 })
-export class AppInsightsGraphsComponent implements OnInit {
+export class AppInsightsGraphsComponent {
+  public graphsData: Observable<AppInsightsResponse>[];
 
-  idStream: Subject<string>;
+  private armIdStream: Subject<string>;
+  private functionNameStream: Subject<string>;
 
-  constructor() {
-    this.idStream = new Subject<string>();
+  constructor(private _uxSettingsService: UxSettingsService) {
+    this.armIdStream = new Subject<string>();
+    this.functionNameStream = new BehaviorSubject<string>('');
 
+    Observable.combineLatest(this.armIdStream, this.functionNameStream, (x, y) => ({ armId: x, functionName: y }))
+      .switchMap(data => Observable.zip(
+          _uxSettingsService.getAppInsightsConfig(data.armId),
+          _uxSettingsService.getGraphs(data.armId, data.functionName))
+      )
+      .do(null, () => {
+        // log error
+      })
+      .retry()
+      .subscribe((result: [{ apiKey: string, appId: string }, Query[]]) => {
+        const appInsightsConfig = result[0];
+        const queries = result[1];
+        this.graphsData = queries.map(q => this._uxSettingsService.getQueryData(appInsightsConfig, q));
+      });
   }
 
-  @Input() set id(value: string) {
-    this.
+  @Input() set armId(value: string) {
+    if (value) {
+      this.armIdStream.next(value);
+    }
   }
 
-  ngOnInit() {
+  @Input() set functionName(value: string) {
+    if (value) {
+      this.functionNameStream.next(value);
+    }
   }
-
 }
