@@ -104,7 +104,8 @@
     <div *ngIf="!isStandalone" id="site-summary-features">
         <h3>{{ 'enabledFeatures_header' | translate }}</h3>
         <site-enabled-features [siteInput]="site" (componentName)="openComponent($event)"></site-enabled-features>
-        <h3>{{ 'functionAppGraphs' | translate }}</h3>
+    </div>
+    <div>
         <app-insights-graphs [armId]="site?.id"></app-insights-graphs>
     </div>
 </div>

@@ -15,6 +15,7 @@ declare var require;
 export class MonacoEditorDirective {
     @Output() public onContentChanged: EventEmitter<string>;
     @Output() public onSave: EventEmitter<string>;
+    @Output() public onShiftEnter: EventEmitter<string>;
 
     private _language: string;
     private _content: string;
@@ -32,6 +33,7 @@ export class MonacoEditorDirective {
 
         this.onContentChanged = new EventEmitter<string>();
         this.onSave = new EventEmitter<string>();
+        this.onShiftEnter = new EventEmitter<string>();
 
         this._functionAppStream = new Subject<FunctionApp>();
         this._functionAppStream
@@ -104,19 +106,110 @@ export class MonacoEditorDirective {
                 this._language = 'typescript';
                 break;
             // Monaco does not have sh, php
+            case 'kusto':
+                this._language = 'Kusto';
+                break;
             default:
                 this._language = undefined;
                 break;
         }
 
-        if (this._editor) {
+        //if (this._editor) {
             this.init();
             // This does not work for JSON
             // monaco.editor.setModelLanguage(this._editor.getModel(), this._language);
-        }
+     //   }
     }
 
+    private registerKustoLanguage() {
+        let language = {
+                    name: 'kusto',
+                    mimeTypes: ['text/kusto'],
+                    displayName: "Kusto",
+                    defaultToken: "invalid",
+                    brackets: [ ['[',']','delimiter.square'],
+                                ['(',')','delimiter.parenthesis'] ],
+                    wordDefinition: /(-?\d*\.\d\w*)|([^\`\~\!\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
+                    // promotedOperatorCommandTokens: (<any>window).Kusto.Data.IntelliSense.CslCommandParser.promotedOperatorCommandTokens,
+                    // operatorCommandTokens: (<any>window).Kusto.Data.IntelliSense.CslCommandParser.operatorCommandTokens,
+                    keywords: [
+                        'by', 'on', 'contains', 'notcontains', 'containscs', 'notcontainscs', 'startswith', 'has', 'matches', 'regex', 'true',
+                        'false', 'and', 'or', 'typeof', 'int', 'string', 'date', 'datetime', 'time', 'long', 'real', '​boolean', 'bool',
+                        'where', 'summarize', 'project', 'extend', 'render'
+                    ],
+                    operators: ['+', '-', '*', '/', '>', '<', '==', '<>', '<=', '>=', '~', '!~'],
+                    builtinFunctions: [
+                        'countof', 'bin', 'extentid', 'extract', 'extractjson', 'floor', 'iif', 'isnull', 'isnotnull', 'notnull', 'isempty',
+                        'isnotempty', 'notempty', 'now', 're2', 'strcat', 'strlen', 'toupper',
+                        'tostring', 'count', 'cnt', 'sum', 'min', 'max', 'avg'],
+                    tokenizer: {
+                        root: [
+                            { include: '@whitespace' },
+                            { include: '@numbers' },
+                            { include: '@strings' },
+                            { include: '@dqstrings' },
+                            { include: '@literals' },
+                            { include: '@comments' },
+                            [/[;,.]/, 'delimiter'],
+                            [/[()\[\]]/, '@brackets'],
+                            [/[<>=!%&+\-*/|~^]/, 'operator'],
+                            [/[\w@#\-$]+/, {
+                                cases: {
+                                    '@keywords': 'keyword',
+                                    // '@promotedOperatorCommandTokens': 'keyword',
+                                    // '@operatorCommandTokens': 'keyword',
+                                    '@operators': 'operator',
+                                    '@builtinFunctions': 'predefined',
+                                    '@default': 'identifier',
+                                }
+                            }],
+                        ],
+                        whitespace: [[/\s+/, 'white']],
+                        comments: [["\\/\\/+.*", "comment"]],
+                        numbers: [
+                            [/0[xX][0-9a-fA-F]*/, 'number'],
+                            [/[$][+-]*\d*(\.\d*)?/, 'number'],
+                            [/((\d+(\.\d*)?)|(\.\d+))([eE][\-+]?\d+)?/, 'number']
+                        ],
+                        strings: [
+                            [/H'/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+                            [/h'/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+                            [/'/, { token: 'string.quote', bracket: '@open', next: '@string' }]
+                        ],
+                        string: [
+                            [/[^']+/, 'string'],
+                            [/''/, 'string'],
+                            [/'/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+                        ],
+                        dqstrings: [
+                            [/H"/, { token: 'string.quote', bracket: '@open', next: '@dqstring' }],
+                            [/h"/, { token: 'string.quote', bracket: '@open', next: '@dqstring' }],
+                            [/"/, { token: 'string.quote', bracket: '@open', next: '@dqstring' }]
+                        ],
+                        dqstring: [
+                            [/[^"]+/, 'string'],
+                            [/""/, 'string'],
+                            [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+                        ],
 
+                        literals: [[/datetime\(\d{4}-\d{2}-\d{2}(\s+\d{2}:\d{2}(:\d{2}(\.\d{0,3})?)?)?\)/, 'number'],
+                            [/time\((\d+(s(ec(onds?)?)?|m(in(utes?)?)?|h(ours?)?|d(ays?)?)|(\s*(('[^']+')|("[^"]+"))\s*))\)/, 'number'],
+                            [/guid\([\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}\)/, 'number'],
+                            [/typeof\((int|string|date|datetime|time|long|real|boolean|bool)\)/, 'number']]
+                    }
+                };
+                monaco.languages.register({ id: 'Kusto' });
+                monaco.languages.setMonarchTokensProvider('Kusto', language);
+                // monaco.languages.registerCompletionItemProvider('Kusto', {
+                //     triggerCharacters: [' '],
+                //     provideCompletionItems: function (model, position) {
+                //         var word = model.getWordUntilPosition(position);
+                //         var commandText = getCommandText(model, position);
+
+                //         return $laKustoIntelliSense.suggest(commandText);
+                //     }
+                // });
+    }
 
     public setLayout(width?: number, height?: number) {
         if (this._editor) {
@@ -145,7 +238,7 @@ export class MonacoEditorDirective {
                 const hostJson = 'host.json';
                 let fileName = that._fileName || '';
                 fileName = fileName.toLocaleLowerCase();
-                if (fileName === projectJson || fileName === functionJson || fileName === hostJson) {
+                if ((fileName === projectJson || fileName === functionJson || fileName === hostJson) && that._functionApp) {
                         that.setMonacoSchema(fileName, that._functionApp);
                 } else {
                     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -157,6 +250,10 @@ export class MonacoEditorDirective {
                 monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
                     target: monaco.languages.typescript.ScriptTarget.ES2015,
                 });
+
+                if (this._language === 'Kusto') {
+                    this.registerKustoLanguage();
+                }
 
                 that._editor = monaco.editor.create(that.elementRef.nativeElement, {
                     value: that._content,
@@ -175,6 +272,11 @@ export class MonacoEditorDirective {
                 that._editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, () => {
                     that.onSave.emit(that._editor.getValue());
                 });
+
+                that._editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
+                    that.onShiftEnter.emit(that._editor.getValue());
+                });
+
                 that._globalStateService.clearBusyState();
 
             });

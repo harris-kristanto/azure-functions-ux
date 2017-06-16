@@ -24,8 +24,18 @@
 }
 
 .busy-site-tabs{
-  width: calc(100% - #{$sidenav-width});  
+  width: calc(100% - #{$sidenav-width});
   height: calc(100% - #{$top-bar-height} - 1px);
+}
+
+.busy-graph {
+  width: 535px;
+  height: 353px;
+}
+
+.busy-graph-full {
+  width: 98%;
+  height: 353px;
 }
 
 @-webkit-keyframes fxs-progress-animatedEllipses {

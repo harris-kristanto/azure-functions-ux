@@ -5,6 +5,6 @@ export interface UxSettings {
 export interface Query {
   id?: string;
   value: string;
-  createdTime: string;
-  modifiedTime: string;
+  createdTime?: string;
+  modifiedTime?: string;
 }

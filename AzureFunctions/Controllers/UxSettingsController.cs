@@ -29,27 +29,34 @@ namespace AzureFunctions.Controllers
         public async Task<HttpResponseMessage> AddOrUpdateGraph(string id, Query query)
         {
             await VerifyOwnership(id);
-            var settings = await _storageManager.UpdateObject<UxSettings>(id, s =>
+            query = await _storageManager.UpdateObject<UxSettings, Query>(id, s =>
             {
                 var existingQuery = s.Graphs.FirstOrDefault(q => q.Id == query.Id);
                 if (query.Id == null || existingQuery == null)
                 {
-                    s.Graphs = s.Graphs.Concat(new[] { new Query(query.Value) });
+                    var newQuery = new Query(query.Value);
+                    s.Graphs = s.Graphs.Concat(new[] { newQuery });
+                    return newQuery;
                 }
                 else
                 {
                     existingQuery.Value = query.Value;
                     existingQuery.ModifiedTime = DateTimeOffset.UtcNow;
+                    return existingQuery;
                 }
             });
-            return Request.CreateResponse(HttpStatusCode.OK, settings);
+            return Request.CreateResponse(HttpStatusCode.OK, query);
         }
 
         [HttpDelete]
-        public async Task<HttpResponseMessage> DeleteGraph(string id, Query query)
+        public async Task<HttpResponseMessage> DeleteGraph(string id, Guid queryId)
         {
             await VerifyOwnership(id);
-            await _storageManager.UpdateObject<UxSettings>(id, s => s.Graphs = s.Graphs.Where(q => q.Id != query.Id));
+            await _storageManager.UpdateObject<UxSettings, Query>(id, s =>
+            {
+                s.Graphs = s.Graphs.Where(q => q.Id != queryId);
+                return null;
+            });
             return new HttpResponseMessage(HttpStatusCode.NoContent);
         }
 

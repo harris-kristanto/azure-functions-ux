@@ -5,7 +5,7 @@ import { AppInsightsResponse } from './../models/app-insights-response';
 import { Observable } from 'rxjs/Observable';
 import { UxSettings, Query } from './../models/ux-settings';
 import { UserService } from './user.service';
-import { Http, Headers } from '@angular/http';
+import { Http, Headers, Response } from '@angular/http';
 import { Injectable } from '@angular/core';
 
 @Injectable()
@@ -23,14 +23,18 @@ export class UxSettingsService {
             });
     }
 
-    getGraphs(armId: string, functionName?: string): Observable<Query[]> {
-        return this._http.get(`/api/uxsettings/${armId}`, { headers: this.getPortalHeaders() })
+    getQueries(armId: string, functionName?: string): Observable<Query[]> {
+        const url = functionName
+            ? `/api/uxsettings/${armId}/functions/${functionName}`
+            : `/api/uxsettings/${armId}`;
+        return this._http.get(url, { headers: this.getPortalHeaders() })
             .map(r => <UxSettings> r.json())
             .map(r => r.graphs);
     }
 
     getQueryData(aiConfig: {apiKey: string, appId: string}, query: Query): Observable<AppInsightsResponse> {
-        return this._http.get(`${this._appInsightsHost}/beta/apps/${aiConfig.appId}/query?query=${encodeURIComponent(query.value)}`, { headers: new Headers({'x-api-key': aiConfig.apiKey})})
+        const url = `${this._appInsightsHost}/beta/apps/${aiConfig.appId}/query?query=${encodeURIComponent(query.value)}`;
+        return this._cacheService.get(url, false, new Headers({'x-api-key': aiConfig.apiKey}))
             .map(v => <AppInsightsResponse> v.json());
     }
 
@@ -43,6 +47,21 @@ export class UxSettingsService {
                 appId: appSettingsArm.properties[Constants.appInsightsAppId]
             };
         });
+    }
+
+    addOrUpdateQuery(armId: string, query: Query, functionName?: string): Observable<Query> {
+        const url = functionName
+            ? `/api/uxsettings/graphs/${armId}/functions/${functionName}`
+            : `/api/uxsettings/graphs/${armId}`;
+        return this._http.put(url, JSON.stringify(query), { headers: this.getPortalHeaders() })
+            .map(r => <Query> r.json());
+    }
+
+    deleteQuery(armId: string, query: Query, functionName?: string): Observable<Response> {
+        const url = functionName
+            ? `/api/uxsettings/graphs/${query.id}/${armId}/functions/${functionName}`
+            : `/api/uxsettings/graphs/${query.id}/${armId}`;
+        return this._http.delete(url, { headers: this.getPortalHeaders() });
     }
 
     private getPortalHeaders(): Headers {

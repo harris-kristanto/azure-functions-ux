@@ -31,7 +31,7 @@ namespace AzureFunctions.Code
             return result;
         }
 
-        public async Task<T> UpdateObject<T>(string id, Action<T> process) where T : new()
+        public async Task<M> UpdateObject<T, M>(string id, Func<T, M> process) where T : new()
         {
             id = id?.ToLower();
             (var item, var blob) = await InternalGetObject<T>(id);
@@ -44,7 +44,7 @@ namespace AzureFunctions.Code
                 etag = blob.Properties.ETag;
             }
 
-            process(item);
+            var result = process(item);
 
             var value = JsonConvert.SerializeObject(item);
 
@@ -57,7 +57,7 @@ namespace AzureFunctions.Code
                 await blob.UploadTextAsync(value);
             }
 
-            return item;
+            return result;
         }
 
         private async Task<(T, CloudBlockBlob)> InternalGetObject<T>(string id) where T : new()

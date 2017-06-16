@@ -7,6 +7,6 @@ namespace AzureFunctions.Contracts
     {
         Task<bool> VerifyOwnership(string armId);
         Task<T> GetObject<T>(string id) where T : new();
-        Task<T> UpdateObject<T>(string id, Action<T> process) where T : new();
+        Task<M> UpdateObject<T, M>(string id, Func<T, M> process) where T : new();
     }
 }
